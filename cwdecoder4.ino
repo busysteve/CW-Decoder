@@ -8,13 +8,15 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <EEPROM.h>
 
 const uint8_t pinDit  = 2;  // dit key input
 const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "3.2-trainer"
+#define VERSION   "3.4"
+const byte ver = 34;
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
@@ -113,16 +115,20 @@ void(*resetFunc) (void) = 0;
 #define DDHZ    659    // dit/dah beep = @E5 note
 char xmit_buf[620] = {0};
 uint8_t xmit_cnt=0;
+
+
 char realtime_xmit = 0;
 
 uint16_t keyertone = 650;
 uint16_t remotetone = 750;
 
-
-
 uint16_t lesson = 1;
 int16_t lesson_mode = 0;
 
+uint16_t farns = 0;
+
+volatile uint8_t  keyermode  = 0;   // keyer mode
+volatile uint8_t  keyswap    = 0;   // key swap
 
 
 // table lookup for CW decoder
@@ -237,8 +243,6 @@ void maddr_cmd(uint8_t cmd) {
 // An Iambic (mode A/B) morse code keyer
 // Copyright 2021 Scott Baker KJ7NLA
 
-volatile uint8_t  keyermode  = 0;   // keyer mode
-volatile uint8_t  keyswap    = 0;   // key swap
 
 // keyerinfo bit definitions
 #define DIT_REG     0x01     // dit pressed
@@ -266,7 +270,6 @@ volatile uint8_t  keyswap    = 0;   // key swap
 
 uint8_t  keyerstate = KEY_IDLE;
 uint8_t  keyerinfo  = 0;
-uint16_t farns = 0;
 
 uint16_t dittime;        // dit time
 uint16_t dahtime;        // dah time
@@ -274,7 +277,7 @@ uint16_t lettergap1;     // letter space for decode
 uint16_t lettergap2;     // letter space for send
 uint16_t wordgap1;       // word space for decode
 uint16_t wordgap2;       // word space for send
-uint16_t farnsgap;          // Farnsworth space for send
+//uint16_t farnsgap;          // Farnsworth space for send
 uint8_t  sw1Pushed = 0;  // button pushed
 
 // read and debounce switch
@@ -501,7 +504,7 @@ void send_cwchr(char ch) {
   else mcode = 0x4c;
   // if space (mcode 0x01) is found
   // then wait for one word space
-  if (mcode == 0x01) delay(wordgap2+(farnsgap*3));
+  if (mcode == 0x01) delay(wordgap2);
   else {
     uint8_t mask = 0x80;
     // use a bit mask to find the leftmost 1
@@ -520,7 +523,7 @@ void send_cwchr(char ch) {
       // turn the side-tone off for a symbol space
       delay(dittime);
     }
-    delay(lettergap2+farnsgap);  // add letter space
+    delay(lettergap2);  // add letter space
   }
 }
 
@@ -553,11 +556,11 @@ uint8_t keyerwpm;
 void ditcalc() {
   dittime    = DITCONST/keyerwpm;
   dahtime    = (DITCONST * 3)/keyerwpm;
-  lettergap1 = (DITCONST * 2.5)/keyerwpm;
-  lettergap2 = (DITCONST * 3)/keyerwpm;
-  farnsgap   = (DITCONST * 3)/keyerwpm;
-  wordgap1   = (DITCONST * 5)/keyerwpm;  // SDM
-  wordgap2   = (DITCONST * 7)/keyerwpm;
+  lettergap1 = (DITCONST * 2.5)/(keyerwpm-farns);
+  //lettergap2 = (DITCONST * 3)/keyerwpm;
+  lettergap2   = (DITCONST * 3)/(keyerwpm-farns);
+  wordgap1   = (DITCONST * 5)/(keyerwpm-farns);  // SDM
+  wordgap2   = (DITCONST * 7)/(keyerwpm-farns);
 }
 
 // change the keyer speed
@@ -605,6 +608,7 @@ void menu_wpm() {
   // if wpm changed the recalculate the
   // dit timing and and send an OK message
   if (prev_wpm != keyerwpm) {
+    EEPROM[4] = keyerwpm;
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
@@ -712,6 +716,7 @@ void menu_trainer_mode() {
   // if wpm changed the recalculate the
   // dit timing and and send an OK message
   if (prev_lesson_mode != lesson_mode) {
+    EEPROM[2] = (byte)lesson_mode;
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
@@ -766,6 +771,7 @@ void menu_trainer_lesson() {
   // if wpm changed the recalculate the
   // dit timing and and send an OK message
   if (prev_lesson != lesson) {
+    EEPROM[1] = (byte)lesson;
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
@@ -822,6 +828,7 @@ void menu_trainer_farns() {
   // if wpm changed the recalculate the
   // dit timing and and send an OK message
   if (prev_farns != farns) {
+    EEPROM[3] = (byte)farns;
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
@@ -1014,7 +1021,7 @@ void menu_msg() {
     char* lesson_seq = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X";
     int len = strlen(quiz);
 
-    srandom(millis());
+    srandom( millis() );
 
     for( int i=0; i < len; i++ )
     {
@@ -1077,6 +1084,27 @@ void setup() {
   lcd.clear();
   //lcd.autoscroll();
   lcd.setCursor(20,0);    
+
+  byte val = EEPROM.read(0);
+  if( val != ver )
+  {
+    EEPROM[0] = ver;
+    EEPROM[1] = lesson = 0;
+    EEPROM[2] = lesson_mode = 0;
+    EEPROM[3] = farns = 0;
+    EEPROM[4] = keyerwpm = INITWPM;
+
+    //EEPROM.write()
+  }
+  else
+  {
+    lesson = EEPROM[1];
+    lesson_mode = EEPROM[2];
+    farns = EEPROM[3];
+    keyerwpm = EEPROM[4];
+
+    //EEPROM.write()
+  }
 }
 
 // main loop
