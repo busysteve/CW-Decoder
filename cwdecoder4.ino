@@ -4,6 +4,9 @@
 //
 // (c) Scott Baker KJ7NLA
 // ============================================================
+//
+// Modified and updated by Stephen Mathews K4SDM
+// ============================================================
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -209,19 +212,8 @@ void printchar(char ch) {
 // convert morse to ascii and print
 void print_cw() {
   char ch = lookup_cw(maddr);
-  //printchar(ch);
-  if( ch == '^' )
-  {
-    lcd.clear();
-    //lcd.autoscroll();
-    lcd.setCursor(20,0);    
-  }
-  else
-  {
-    printchar(ch);
-    //lcd.scrollDisplayLeft();
-    //lcd.setCursor(20,0);
-  }
+  printchar(ch);
+
 }
 
 // update the morse code table address
