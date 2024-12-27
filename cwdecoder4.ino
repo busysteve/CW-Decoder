@@ -14,7 +14,7 @@ const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "2.5a-trainer"
+#define VERSION   "3.2-trainer"
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
@@ -266,6 +266,7 @@ volatile uint8_t  keyswap    = 0;   // key swap
 
 uint8_t  keyerstate = KEY_IDLE;
 uint8_t  keyerinfo  = 0;
+uint16_t farns = 0;
 
 uint16_t dittime;        // dit time
 uint16_t dahtime;        // dah time
@@ -273,7 +274,7 @@ uint16_t lettergap1;     // letter space for decode
 uint16_t lettergap2;     // letter space for send
 uint16_t wordgap1;       // word space for decode
 uint16_t wordgap2;       // word space for send
-uint16_t farns = 0;          // Farnsworth space for send
+uint16_t farnsgap;          // Farnsworth space for send
 uint8_t  sw1Pushed = 0;  // button pushed
 
 // read and debounce switch
@@ -500,7 +501,7 @@ void send_cwchr(char ch) {
   else mcode = 0x4c;
   // if space (mcode 0x01) is found
   // then wait for one word space
-  if (mcode == 0x01) delay(wordgap2+(farns*2));
+  if (mcode == 0x01) delay(wordgap2+(farnsgap*3));
   else {
     uint8_t mask = 0x80;
     // use a bit mask to find the leftmost 1
@@ -519,7 +520,7 @@ void send_cwchr(char ch) {
       // turn the side-tone off for a symbol space
       delay(dittime);
     }
-    delay(lettergap2+farns);  // add letter space
+    delay(lettergap2+farnsgap);  // add letter space
   }
 }
 
@@ -554,7 +555,7 @@ void ditcalc() {
   dahtime    = (DITCONST * 3)/keyerwpm;
   lettergap1 = (DITCONST * 2.5)/keyerwpm;
   lettergap2 = (DITCONST * 3)/keyerwpm;
-  lettergap2 = (DITCONST * 3)/keyerwpm;
+  farnsgap   = (DITCONST * 3)/keyerwpm;
   wordgap1   = (DITCONST * 5)/keyerwpm;  // SDM
   wordgap2   = (DITCONST * 7)/keyerwpm;
 }
