@@ -12,9 +12,9 @@
 const uint8_t pinDit  = 2;  // dit key input
 const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
-const uint8_t pinBuzz = 8;  // buzzer/speaker pin
+const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "2.5a-test"
+#define VERSION   "2.5a-trainer"
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
@@ -59,6 +59,12 @@ volatile uint8_t  menumode = RUN_MODE;
 
 #define MINTONE 450
 #define MAXTONE 850
+
+#define MINLESSONMODE 0
+#define MAXLESSONMODE 1
+
+#define MINLESSON 1
+#define MAXLESSON 39
 
 
 // 4x20 LCD
@@ -112,6 +118,13 @@ char realtime_xmit = 0;
 uint16_t keyertone = 650;
 uint16_t remotetone = 750;
 
+
+
+uint16_t lesson = 1;
+int16_t lesson_mode = 0;
+
+
+
 // table lookup for CW decoder
 char lookup_cw(uint8_t addr) {
   char ch = '*';
@@ -137,7 +150,7 @@ void clear_line(uint8_t row) {
   lcd.print(SPACE20);
 }
 
-/*
+
 // print the ascii char
 void printchar(char ch) {
   if ((myrow <= MAXLINE) & (mycol <= MAXCOL)) {
@@ -159,7 +172,8 @@ void printchar(char ch) {
     clear_line(myrow);
   }
 }
-*/
+
+/*
 char scrollbuf [81] = {' '};
 
 
@@ -184,6 +198,7 @@ void printchar(char ch) {
     }
   //}
 }
+*/
 
 // convert morse to ascii and print
 void print_cw() {
@@ -258,6 +273,7 @@ uint16_t lettergap1;     // letter space for decode
 uint16_t lettergap2;     // letter space for send
 uint16_t wordgap1;       // word space for decode
 uint16_t wordgap2;       // word space for send
+uint16_t farns = 0;          // Farnsworth space for send
 uint8_t  sw1Pushed = 0;  // button pushed
 
 // read and debounce switch
@@ -484,7 +500,7 @@ void send_cwchr(char ch) {
   else mcode = 0x4c;
   // if space (mcode 0x01) is found
   // then wait for one word space
-  if (mcode == 0x01) delay(wordgap2);
+  if (mcode == 0x01) delay(wordgap2+(farns*2));
   else {
     uint8_t mask = 0x80;
     // use a bit mask to find the leftmost 1
@@ -503,7 +519,7 @@ void send_cwchr(char ch) {
       // turn the side-tone off for a symbol space
       delay(dittime);
     }
-    delay(lettergap2);  // add letter space
+    delay(lettergap2+farns);  // add letter space
   }
 }
 
@@ -537,6 +553,7 @@ void ditcalc() {
   dittime    = DITCONST/keyerwpm;
   dahtime    = (DITCONST * 3)/keyerwpm;
   lettergap1 = (DITCONST * 2.5)/keyerwpm;
+  lettergap2 = (DITCONST * 3)/keyerwpm;
   lettergap2 = (DITCONST * 3)/keyerwpm;
   wordgap1   = (DITCONST * 5)/keyerwpm;  // SDM
   wordgap2   = (DITCONST * 7)/keyerwpm;
@@ -646,6 +663,170 @@ void menu_tone() {
     back2run();
   } else menu_remotetone();
 }
+
+// remote keyer tone menu to
+// increase or decrease keyer tone
+void menu_trainer_mode() {
+  uint16_t prev_lesson_mode = lesson_mode;
+  lcd.clear();
+  print_line(0, "TRAINER MODE");
+  // wait until button is released
+  while (sw1Pushed) {
+    read_switch();
+    delay(10);
+  }
+  // loop until button is pressed
+  while (!sw1Pushed) {
+    read_switch();
+    keyerinfo = 0;
+    read_paddles();
+    if (keyerinfo & DAH_REG) {
+      lesson_mode+=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    if (keyerinfo & DIT_REG) {
+      lesson_mode-=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    // check limits
+    if (lesson_mode < MINLESSONMODE) lesson_mode = MINLESSONMODE;
+    if (lesson_mode > MAXLESSONMODE) lesson_mode = MAXLESSONMODE;
+
+    
+    while (GOTKEY) {
+      keyerinfo = 0;
+      read_paddles();
+      delay(10);
+    }
+    keyerinfo = 0;
+    itoa(lesson_mode,tmpstr,10);
+    //strcat(tmpstr," Hz");
+    print_line(1, tmpstr);
+  }
+  delay(10); // debounce
+  // if wpm changed the recalculate the
+  // dit timing and and send an OK message
+  if (prev_lesson_mode != lesson_mode) {
+    ditcalc();
+    send_cwmsg("OK", 0);
+    back2run();
+  } else menu_trainer_lesson();
+}
+
+
+// remote keyer tone menu to
+// increase or decrease keyer tone
+void menu_trainer_lesson() {
+  uint16_t prev_lesson = lesson;
+  lcd.clear();
+  print_line(0, "TRAINER LESSON");
+  // wait until button is released
+  while (sw1Pushed) {
+    read_switch();
+    delay(10);
+  }
+  // loop until button is pressed
+  while (!sw1Pushed) {
+    read_switch();
+    keyerinfo = 0;
+    read_paddles();
+    if (keyerinfo & DAH_REG) {
+      lesson+=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    if (keyerinfo & DIT_REG) {
+      lesson-=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    // check limits
+    if (lesson < MINLESSON) lesson = MINLESSON;
+    if (lesson > MAXLESSON) lesson = MAXLESSON;
+
+    
+    while (GOTKEY) {
+      keyerinfo = 0;
+      read_paddles();
+      delay(10);
+    }
+    keyerinfo = 0;
+    itoa(lesson,tmpstr,10);
+    //strcat(tmpstr," Hz");
+    print_line(1, tmpstr);
+  }
+  delay(10); // debounce
+  // if wpm changed the recalculate the
+  // dit timing and and send an OK message
+  if (prev_lesson != lesson) {
+    ditcalc();
+    send_cwmsg("OK", 0);
+    back2run();
+  } else menu_trainer_farns();
+}
+
+
+
+
+// remote keyer tone menu to
+// increase or decrease keyer tone
+void menu_trainer_farns() {
+  uint16_t prev_farns = farns;
+  lcd.clear();
+  print_line(0, "TRAINER FARNSWORTH");
+  // wait until button is released
+  while (sw1Pushed) {
+    read_switch();
+    delay(10);
+  }
+  // loop until button is pressed
+  while (!sw1Pushed) {
+    read_switch();
+    keyerinfo = 0;
+    read_paddles();
+    if (keyerinfo & DAH_REG) {
+      farns+=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    if (keyerinfo & DIT_REG) {
+      farns-=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    // check limits
+    if (farns < 0) farns = 0;
+    if (farns > 10) farns = 10;
+
+    
+    while (GOTKEY) {
+      keyerinfo = 0;
+      read_paddles();
+      delay(10);
+    }
+    keyerinfo = 0;
+    itoa(farns,tmpstr,10);
+    //strcat(tmpstr," Hz");
+    print_line(1, tmpstr);
+  }
+  delay(10); // debounce
+  // if wpm changed the recalculate the
+  // dit timing and and send an OK message
+  if (prev_farns != farns) {
+    ditcalc();
+    send_cwmsg("OK", 0);
+    back2run();
+  } else menu_wpm();
+}
+
 
 
 // remote keyer tone menu to
@@ -815,20 +996,56 @@ void menu_mode() {
 
 // send a message
 void menu_msg() {
-  char *msg = "ALL WORK  AND NO PLAY MAKES  JACK A DULL BOY. ";
-  myrow = 0;
-  mycol = 0;
-  lcd.clear();
-  // wait until button is released
-  while (sw1Pushed) {
-    read_switch();
-    delay(1);
+  if( lesson_mode == 1 )
+  {
+    char *quiz = "ALL WORK  AND NO PLAY MAKES  JACK A DULL BOY.  A DULL BOY.   A DULL BOY.   DULL";
+    myrow = 0;
+    mycol = 0;
+    lcd.clear();
+    // wait until button is released
+    while (sw1Pushed) {
+      read_switch();
+      delay(1);
+    }
+
+    delay(3000);
+
+    char* lesson_seq = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X";
+    int len = strlen(quiz);
+
+    srandom(millis());
+
+    for( int i=0; i < len; i++ )
+    {
+      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' ? ' ' : lesson_seq[random() % (lesson+1)];
+    }
+
+    send_cwmsg(quiz, 1);
+
+    // loop until button is pressed
+    while (!sw1Pushed) {
+      read_switch();
+      delay(1);
+    }
+    back2run();
   }
-  // loop until button is pressed
-  while (!sw1Pushed) {
-    send_cwmsg(msg, 1);
+  else
+  {
+    char *msg = "ALL WORK  AND NO PLAY MAKES  JACK A DULL BOY. ";
+    myrow = 0;
+    mycol = 0;
+    lcd.clear();
+    // wait until button is released
+    while (sw1Pushed) {
+      read_switch();
+      delay(1);
+    }
+    // loop until button is pressed
+    while (!sw1Pushed) {
+      send_cwmsg(msg, 1);
+    }
+    back2run();
   }
-  back2run();
 }
 
 // reset the Arduino
@@ -885,7 +1102,7 @@ void loop() {
         default:
           menumode = 0;
       }
-      menu_wpm();
+      menu_trainer_mode();
       event = NBP;
     }
 
