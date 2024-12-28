@@ -3,6 +3,7 @@
 // decoder.ino :: An Iambic Keyer and Decoder (4x20 LCD)
 //
 // (c) Scott Baker KJ7NLA
+// Modified and Updated by Stephen Mathews K4SDM
 // ============================================================
 
 #include <Arduino.h>
