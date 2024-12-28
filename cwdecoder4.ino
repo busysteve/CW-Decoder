@@ -4,9 +4,6 @@
 //
 // (c) Scott Baker KJ7NLA
 // ============================================================
-//
-// Modified and updated by Stephen Mathews K4SDM
-// ============================================================
 
 #include <Arduino.h>
 #include <Wire.h>
@@ -23,7 +20,7 @@ const byte ver = 34;
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
-const char m2a[128] PROGMEM =
+const char m2a[129] PROGMEM =
   {'~',' ','E','T','I','A','N','M','S','U','R','W','D','K','G','O',
    'H','V','F','*','L','*','P','J','B','X','C','Y','Z','Q','*','*',
    '5','4','S','3','*','*','*','2','&','*','+','*','*','*','J','1',
@@ -31,7 +28,7 @@ const char m2a[128] PROGMEM =
    '^','*','*','*','*','*','*','*','*','*','*','*','?','_','*','*',
    '*','\\','"','*','*','.','*','*','*','*','@','*','*','*','\'','*',
    '*','-','*','*','*','*','*','*','*','*',';','!','*',')','*','*',
-   '*','*','*',',','*','*','*','*',':','*','*','*','*','*','*','*'};
+   '*','*','*',',','*','*','*','*',':','*','*','*','*','*','*','*','^'};
 
 // ASCII-to-Morse lookup table
 const uint8_t a2m[64] PROGMEM =
@@ -42,7 +39,7 @@ const uint8_t a2m[64] PROGMEM =
    0x5a,0x05,0x18,0x1a,0x0c,0x02,0x12,0x0e,  // @ A B C D E F G
    0x10,0x04,0x17,0x0d,0x14,0x07,0x06,0x0f,  // H I J K L M N O
    0x16,0x1d,0x0a,0x08,0x03,0x09,0x11,0x0b,  // P Q R S T U V W
-   0x19,0x1b,0x1c,0x4c,0x40,0x4c,0x4c,0x4d}; // X Y Z [ \ ] ^ _
+   0x19,0x1b,0x1c,0x4c,0x40,0x4c,0x80,0x4d}; // X Y Z [ \ ] ^ _
 
 // user interface
 #define NBP  0  // no-button-pushed
@@ -137,7 +134,7 @@ volatile uint8_t  keyswap    = 0;   // key swap
 // table lookup for CW decoder
 char lookup_cw(uint8_t addr) {
   char ch = '*';
-  if (addr < 128) ch = pgm_read_byte(m2a + addr);
+  if (addr < 129) ch = pgm_read_byte(m2a + addr);
 
   #ifdef DEBUG
   Serial.println(addr);
