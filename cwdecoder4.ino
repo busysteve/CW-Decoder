@@ -69,6 +69,9 @@ volatile uint8_t  menumode = RUN_MODE;
 #define MINLESSON 1
 #define MAXLESSON 39
 
+#define MINLESSONCNT 10
+#define MAXLESSONCNT 80
+
 
 // 4x20 LCD
 #define COLSIZE   20
@@ -124,6 +127,7 @@ uint16_t keyertone = 650;
 uint16_t remotetone = 750;
 
 uint16_t lesson = 1;
+uint16_t lesson_size = MAXLESSONCNT;
 int16_t lesson_mode = 0;
 
 uint16_t farns = 0;
@@ -765,6 +769,61 @@ void menu_trainer_lesson() {
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
+  } else menu_trainer_lesson_size();
+}
+
+
+// remote keyer tone menu to
+// increase or decrease keyer tone
+void menu_trainer_lesson_size() {
+  uint16_t prev_lesson_size = lesson_size;
+  lcd.clear();
+  print_line(0, "TRAINING SIZE");
+  // wait until button is released
+  while (sw1Pushed) {
+    read_switch();
+    delay(10);
+  }
+  // loop until button is pressed
+  while (!sw1Pushed) {
+    read_switch();
+    keyerinfo = 0;
+    read_paddles();
+    if (keyerinfo & DAH_REG) {
+      lesson_size+=10;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    if (keyerinfo & DIT_REG) {
+      lesson_size-=10;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    // check limits
+    if (lesson_size < MINLESSONCNT) lesson_size = MINLESSONCNT;
+    if (lesson_size > MAXLESSONCNT) lesson_size = MAXLESSONCNT;
+
+    
+    while (GOTKEY) {
+      keyerinfo = 0;
+      read_paddles();
+      delay(10);
+    }
+    keyerinfo = 0;
+    itoa(lesson_size,tmpstr,10);
+    //strcat(tmpstr," Hz");
+    print_line(1, tmpstr);
+  }
+  delay(10); // debounce
+  // if wpm changed the recalculate the
+  // dit timing and and send an OK message
+  if (prev_lesson_size != lesson_size) {
+    EEPROM[6] = (byte)lesson_size;
+    ditcalc();
+    send_cwmsg("OK", 0);
+    back2run();
   } else menu_trainer_farns();
 }
 
@@ -1015,13 +1074,18 @@ void menu_msg() {
     char* lesson_seq = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X";
     int len = strlen(quiz);
 
+    if( len > lesson_size )
+    {
+      len = lesson_size;
+    }
+    
     srandom( millis() );
 
     for( int i=0; i < len; i++ )
     {
       quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' ? ' ' : lesson_seq[random() % (lesson+1)];
     }
-
+    quiz[len] = 0;
     send_cwmsg(quiz, 1);
 
     // loop until button is pressed
@@ -1088,6 +1152,7 @@ void setup() {
     EEPROM[3] = farns = 0;
     EEPROM[4] = keyerwpm = INITWPM;
     EEPROM[5] = keyermode = IAMBICA;
+    EEPROM[6] = lesson_size = MAXLESSONCNT;
 
 
     //EEPROM.write()
@@ -1099,6 +1164,7 @@ void setup() {
     farns = EEPROM[3];
     keyerwpm = EEPROM[4];
     keyermode = EEPROM[5];
+    lesson_size = EEPROM[6];
 
     //EEPROM.write()
   }
