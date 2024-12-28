@@ -987,7 +987,11 @@ void menu_mode() {
     }
   }
   delay(10); // debounce
-  if (prev_mode != keyermode) send_cwmsg("OK", 0);
+  if (prev_mode != keyermode) 
+  {
+    EEPROM[5] = keyermode;
+    send_cwmsg("OK", 0);
+  }
   back2run();
 }
 
@@ -1082,6 +1086,8 @@ void setup() {
     EEPROM[2] = lesson_mode = 0;
     EEPROM[3] = farns = 0;
     EEPROM[4] = keyerwpm = INITWPM;
+    EEPROM[5] = keyermode = IAMBICA;
+
 
     //EEPROM.write()
   }
@@ -1091,6 +1097,7 @@ void setup() {
     lesson_mode = EEPROM[2];
     farns = EEPROM[3];
     keyerwpm = EEPROM[4];
+    keyermode = EEPROM[5];
 
     //EEPROM.write()
   }
