@@ -16,7 +16,7 @@ const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "3.4.2"
+#define VERSION   "3.4.3"
 const byte ver = 34;
 //#define DEBUG 1           // uncomment for debug
 
@@ -69,7 +69,7 @@ volatile uint8_t  menumode = RUN_MODE;
 #define MINLESSON 1
 #define MAXLESSON 39
 
-#define MINLESSONCNT 10
+#define MINLESSONCNT 3
 #define MAXLESSONCNT 80
 
 
@@ -790,13 +790,20 @@ void menu_trainer_lesson_size() {
     keyerinfo = 0;
     read_paddles();
     if (keyerinfo & DAH_REG) {
-      lesson_size+=10;
+      if( lesson_size < 10 )
+        lesson_size+=1;
+      else
+        lesson_size+=10;
+
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
     }
     if (keyerinfo & DIT_REG) {
-      lesson_size-=10;
+      if( lesson_size <= 10 )
+        lesson_size-=1;
+      else
+        lesson_size-=10;
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
@@ -1085,7 +1092,7 @@ test_again:
 
     for( int i=0; i < len; i++ )
     {
-      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' ? ' ' : lesson_seq[random() % (lesson+1)];
+      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 5 ? ' ' : lesson_seq[random() % (lesson+1)];
     }
     quiz[len] = 0;
     send_cwmsg(quiz, 1);
