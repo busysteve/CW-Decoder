@@ -1092,7 +1092,7 @@ test_again:
 
     for( int i=0; i < len; i++ )
     {
-      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 5 ? ' ' : lesson_seq[random() % (lesson+1)];
+      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[random() % (lesson+1)];
     }
     quiz[len] = 0;
     send_cwmsg(quiz, 1);
