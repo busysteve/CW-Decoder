@@ -16,7 +16,7 @@ const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "3.4"
+#define VERSION   "3.4.2"
 const byte ver = 34;
 //#define DEBUG 1           // uncomment for debug
 
@@ -1057,6 +1057,8 @@ void menu_mode() {
 
 // send a message
 void menu_msg() {
+
+test_again:
   if( lesson_mode == 1 )
   {
     char *quiz = "ALL WORK  AND NO PLAY MAKES  JACK A DULL BOY.  A DULL BOY.   A DULL BOY.   DULL";
@@ -1090,6 +1092,10 @@ void menu_msg() {
 
     // loop until button is pressed
     while (!sw1Pushed) {
+
+      if( !digitalRead(pinDit) && !digitalRead(pinDah) )
+        goto test_again;
+
       read_switch();
       delay(1);
     }
