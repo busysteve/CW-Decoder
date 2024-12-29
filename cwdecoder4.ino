@@ -16,7 +16,7 @@ const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "3.4.3"
+#define VERSION   "3.4.4"
 const byte ver = 34;
 //#define DEBUG 1           // uncomment for debug
 
@@ -69,7 +69,7 @@ volatile uint8_t  menumode = RUN_MODE;
 #define MINLESSON 1
 #define MAXLESSON 39
 
-#define MINLESSONCNT 3
+#define MINLESSONCNT 1
 #define MAXLESSONCNT 80
 
 
@@ -551,7 +551,6 @@ void ditcalc() {
   dittime    = DITCONST/keyerwpm;
   dahtime    = (DITCONST * 3)/keyerwpm;
   lettergap1 = (DITCONST * 2.5)/(keyerwpm-farns);
-  //lettergap2 = (DITCONST * 3)/keyerwpm;
   lettergap2   = (DITCONST * 3)/(keyerwpm-farns);
   wordgap1   = (DITCONST * 5)/(keyerwpm-farns);  // SDM
   wordgap2   = (DITCONST * 7)/(keyerwpm-farns);
@@ -1078,7 +1077,12 @@ test_again:
       delay(1);
     }
 
-    delay(3000);
+    lcd.clear();
+    print_line(0, "QUIZ MODE");
+
+    delay(2200);
+
+    lcd.clear();
 
     char* lesson_seq = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X";
     int len = strlen(quiz);
