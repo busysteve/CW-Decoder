@@ -548,7 +548,7 @@ uint8_t keyerwpm;
 // initial keyer speed
 void ditcalc() {
   int farn = keyerwpm - farns;
-  if( farn <= 0 ) farn = 1;
+  if( farn <= 0 ) farn = keyerwpm;
 
   dittime    = DITCONST/keyerwpm;
   dahtime    = (DITCONST * 3)/keyerwpm;
