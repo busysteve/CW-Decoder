@@ -16,7 +16,7 @@ const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "3.4.4"
+#define VERSION   "3.4.5"
 const byte ver = 34;
 //#define DEBUG 1           // uncomment for debug
 
@@ -271,7 +271,6 @@ uint16_t lettergap1;     // letter space for decode
 uint16_t lettergap2;     // letter space for send
 uint16_t wordgap1;       // word space for decode
 uint16_t wordgap2;       // word space for send
-//uint16_t farnsgap;          // Farnsworth space for send
 uint8_t  sw1Pushed = 0;  // button pushed
 
 // read and debounce switch
@@ -548,12 +547,15 @@ uint8_t keyerwpm;
 
 // initial keyer speed
 void ditcalc() {
+  int farn = keyerwpm - farns;
+  if( farn <= 0 ) farn = 1;
+
   dittime    = DITCONST/keyerwpm;
   dahtime    = (DITCONST * 3)/keyerwpm;
-  lettergap1 = (DITCONST * 2.5)/(keyerwpm-farns);
-  lettergap2   = (DITCONST * 3)/(keyerwpm-farns);
-  wordgap1   = (DITCONST * 5)/(keyerwpm-farns);  // SDM
-  wordgap2   = (DITCONST * 7)/(keyerwpm-farns);
+  lettergap1 = (DITCONST * 2.5)/(keyerwpm);
+  lettergap2   = (DITCONST * 3)/(farn);
+  wordgap1   = (DITCONST * 5)/(keyerwpm);
+  wordgap2   = (DITCONST * 7)/(farn);
 }
 
 // change the keyer speed
@@ -866,7 +868,7 @@ void menu_trainer_farns() {
     }
     // check limits
     if (farns < 0) farns = 0;
-    if (farns > 10) farns = 10;
+    if (farns > 14) farns = 14;
 
     
     while (GOTKEY) {
@@ -1063,7 +1065,6 @@ void menu_mode() {
 
 // send a message
 void menu_msg() {
-
 test_again:
   if( lesson_mode == 1 )
   {
