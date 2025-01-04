@@ -16,8 +16,8 @@ const uint8_t pinDah  = 3;  // dah key input
 const uint8_t pinSw1  = 7;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
 
-#define VERSION   "3.4.5"
-const byte ver = 34;
+#define VERSION   "3.5.0"
+const byte ver = 35;
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
@@ -123,14 +123,14 @@ uint8_t xmit_cnt=0;
 
 char realtime_xmit = 0;
 
-uint16_t keyertone = 650;
-uint16_t remotetone = 750;
+short keyertone = 650;
+short remotetone = 750;
 
-uint16_t lesson = 1;
-uint16_t lesson_size = MAXLESSONCNT;
-int16_t lesson_mode = 0;
+byte lesson = 1;
+byte lesson_size = MAXLESSONCNT;
+byte lesson_mode = 0;
 
-uint16_t farns = 0;
+byte farns = 0;
 
 volatile uint8_t  keyermode  = 0;   // keyer mode
 volatile uint8_t  keyswap    = 0;   // key swap
@@ -868,7 +868,7 @@ void menu_trainer_farns() {
     }
     // check limits
     if (farns < 0) farns = 0;
-    if (farns > 14) farns = 14;
+    if (farns > 15) farns = 15;
 
     
     while (GOTKEY) {
@@ -885,7 +885,7 @@ void menu_trainer_farns() {
   // if wpm changed the recalculate the
   // dit timing and and send an OK message
   if (prev_farns != farns) {
-    EEPROM[3] = (byte)farns;
+    EEPROM[3] = farns;
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
@@ -1161,16 +1161,16 @@ void setup() {
   //lcd.autoscroll();
   lcd.setCursor(20,0);    
 
-  byte val = EEPROM.read(0);
+  byte val = EEPROM[0];
   if( val != ver )
   {
     EEPROM[0] = ver;
-    EEPROM[1] = lesson = 0;
-    EEPROM[2] = lesson_mode = 0;
-    EEPROM[3] = farns = 0;
-    EEPROM[4] = keyerwpm = INITWPM;
-    EEPROM[5] = keyermode = IAMBICA;
-    EEPROM[6] = lesson_size = MAXLESSONCNT;
+    EEPROM[1] = lesson = (byte) 0;
+    EEPROM[2] = lesson_mode = (byte) 0;
+    EEPROM[3] = farns = (byte) 0;
+    EEPROM[4] = keyerwpm = (byte) INITWPM;
+    EEPROM[5] = keyermode = (byte) IAMBICA;
+    EEPROM[6] = lesson_size = (byte) MAXLESSONCNT;
 
 
     //EEPROM.write()
@@ -1186,6 +1186,8 @@ void setup() {
 
     //EEPROM.write()
   }
+
+  ditcalc();
 }
 
 // main loop
@@ -1225,3 +1227,5 @@ void loop() {
   // no buttons pressed
   iambic_keyer();
 }
+
+
