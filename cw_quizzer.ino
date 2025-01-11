@@ -264,13 +264,13 @@ class LCD_Sim
       buffer[r][c] = ch;
       c++;
 
-      if( c > 15 )
+      if( c >= 15 )
       {
         r++;
         c=0;
       }
 
-      if( r > 5 )
+      if( r >= 5 )
       {
         r=0;
         c=0;
@@ -286,6 +286,7 @@ class LCD_Sim
     void print_line( char row, const char* str )
     {
       r = row;
+      c = 0;
 
       int i;
       for( i=0; str[i] != '\0'; i++ )
@@ -1054,7 +1055,8 @@ void menu_trainer_lesson_size() {
 void menu_trainer_farns() {
   uint16_t prev_farns = farns;
   lcds.clear();
-  print_line(0, "TRAINER FARNSWORTH");
+  print_line(0, "TRAINER");
+  print_line(1, "FARNSWORTH");
   // wait until button is released
   while (sw1Pushed) {
     read_switch();
@@ -1090,7 +1092,7 @@ void menu_trainer_farns() {
     keyerinfo = 0;
     itoa(farns,tmpstr,10);
     //strcat(tmpstr," Hz");
-    print_line(1, tmpstr);
+    print_line(2, tmpstr);
   }
   delay(10); // debounce
   // if wpm changed the recalculate the
@@ -1374,7 +1376,7 @@ void setup() {
     draw();
   } while( u8g.nextPage() );
   
-  delay(3500);
+  delay(1500);
   send_cwmsg("OK", 0);
   //lcds.setRowOffsets( 0, 20, 30 40 );
   lcds.clear();
@@ -1385,8 +1387,8 @@ void setup() {
   if( val != ver )
   {
     EEPROM[0] = ver;
-    EEPROM[1] = lesson = (byte) 0;
-    EEPROM[2] = lesson_mode = (byte) 0;
+    EEPROM[1] = lesson = (byte) 2;
+    EEPROM[2] = lesson_mode = (byte) 1;
     EEPROM[3] = farns = (byte) 0;
     EEPROM[4] = keyerwpm = (byte) INITWPM;
     EEPROM[5] = keyermode = (byte) IAMBICA;
