@@ -239,7 +239,29 @@ class LCD_Sim
     char  r = 0;
     char  c = 0;
 
+    void draw_screen()
+    {
+      u8g.firstPage();  
+      do {
+        u8g.setFont(u8g_font_unifont);
+        u8g.setPrintPos(0, 12); 
+        // call procedure from base class, http://arduino.cc/en/Serial/Print
+        u8g.print( buffer[0] );
+        u8g.setPrintPos(0, 24); 
+        // call procedure from base class, http://arduino.cc/en/Serial/Print
+        u8g.print( buffer[1] );
+        u8g.setPrintPos(0, 36); 
+        // call procedure from base class, http://arduino.cc/en/Serial/Print
+        u8g.print( buffer[2] );
+        u8g.setPrintPos(0, 48); 
+        // call procedure from base class, http://arduino.cc/en/Serial/Print
+        u8g.print( buffer[3] );
+        u8g.setPrintPos(0, 60); 
+        // call procedure from base class, http://arduino.cc/en/Serial/Print
+        u8g.print( buffer[4] );
+      } while( u8g.nextPage() );
 
+    }
 
     void setCursor( char col, char row )
     {
@@ -249,6 +271,8 @@ class LCD_Sim
 
     void clear()
     {
+      r = 0;
+      c = 0;
       for( char i=0; i<5; i++ )
       {
         for( char j=0; j<15; j++ )
@@ -257,11 +281,13 @@ class LCD_Sim
         }
         buffer[i][15] = '\0';
       }
+      draw_screen();
     }
 
-    void print(char ch)
+    void print(char ch, bool draw = true )
     {
       buffer[r][c] = ch;
+
       c++;
 
       if( c >= 15 )
@@ -275,12 +301,17 @@ class LCD_Sim
         r=0;
         c=0;
       }
+
+      if( draw )
+        draw_screen();
     }
 
     void print( const char* str )
     {
       for( int i=0; str[i] != '\0'; i++ )
-        print( str[i] );
+        print( str[i], false );
+
+      draw_screen();
     }
 
     void print_line( char row, const char* str )
@@ -290,12 +321,14 @@ class LCD_Sim
 
       int i;
       for( i=0; str[i] != '\0'; i++ )
-        print( str[i] );
+        print( str[i], false );
 
       for( int j=i; j < 15; j++ )
-        print( ' ' );
+        print( ' ', false );
       
-      print( '\0' );
+      print( '\0', false );
+
+      draw_screen();
     }
 
     void clear_line( char row )
@@ -381,11 +414,6 @@ char lookup_cw(uint8_t addr) {
 void print_line(uint8_t row, char *str) {
   lcds.print_line( row, str );  
 
-  u8g.firstPage();  
-  do {
-    draw();
-  } while( u8g.nextPage() );
-
   //u8g.print(SPACE10);
 }
 
@@ -393,22 +421,12 @@ void print_line(uint8_t row, char *str) {
 void clear_line(uint8_t row) {
   lcds.clear_line(row);
 
-  u8g.firstPage();  
-  do {
-    draw();
-  } while( u8g.nextPage() );
-
 }
 
 
 // print the ascii char
 void printchar(char ch) {
   lcds.print( ch );
-
-  u8g.firstPage();  
-  do {
-    draw();
-  } while( u8g.nextPage() );
 
 }
 
@@ -730,11 +748,12 @@ void send_cwmsg(char *str, uint8_t prn) {
     if (prn) {
       printchar(str[i]);
 
+      /*
       u8g.firstPage();  
       do {
         draw();
       } while( u8g.nextPage() );
-
+      */
 
 
       read_switch();
@@ -1371,11 +1390,13 @@ void setup() {
   print_line(1, "Version");
   print_line(2, VERSION);
 
+  /*
   u8g.firstPage();  
   do {
     draw();
   } while( u8g.nextPage() );
-  
+  */
+
   delay(1500);
   send_cwmsg("OK", 0);
   //lcds.setRowOffsets( 0, 20, 30 40 );
@@ -1412,27 +1433,6 @@ void setup() {
   ditcalc();
 }
 
-
-void draw(void) {
-  // graphic commands to redraw the complete screen should be placed here  
-
-  u8g.setFont(u8g_font_unifont);
-  u8g.setPrintPos(0, 12); 
-  // call procedure from base class, http://arduino.cc/en/Serial/Print
-  u8g.print( lcds.buffer[0] );
-  u8g.setPrintPos(0, 24); 
-  // call procedure from base class, http://arduino.cc/en/Serial/Print
-  u8g.print( lcds.buffer[1] );
-  u8g.setPrintPos(0, 36); 
-  // call procedure from base class, http://arduino.cc/en/Serial/Print
-  u8g.print( lcds.buffer[2] );
-  u8g.setPrintPos(0, 48); 
-  // call procedure from base class, http://arduino.cc/en/Serial/Print
-  u8g.print( lcds.buffer[3] );
-  u8g.setPrintPos(0, 60); 
-  // call procedure from base class, http://arduino.cc/en/Serial/Print
-  u8g.print( lcds.buffer[4] );
-}
 
 
 
@@ -1473,12 +1473,12 @@ void loop() {
     }
   }
 
-
+  /*
   u8g.firstPage();  
   do {
     draw();
   } while( u8g.nextPage() );
-
+  */
 
   // no buttons pressed
   iambic_keyer();
