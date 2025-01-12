@@ -152,7 +152,9 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST)
 const uint8_t pinDit  = 5;  // dit key input
 const uint8_t pinDah  = 6;  // dah key input
 const uint8_t pinSw1  = 10;  // push-button switch
-const uint8_t pinBuzz = 9;  // buzzer/speaker pin
+const uint8_t pinInnerBuzz = 9;  // buzzer/speaker pin
+const uint8_t pinOuterBuzz = 8;  // buzzer/speaker pin
+uint8_t pinBuzz = pinInnerBuzz;  // buzzer/speaker pin
 //const uint8_t pinBuzz = 8;  // buzzer/speaker pin
 
 #define VERSION   "0.1.0"
@@ -391,9 +393,11 @@ uint8_t xmit_cnt=0;
 
 char realtime_xmit = 0;
 
+
 short keyertone = 650;
 short remotetone = 750;
 
+byte buzz_mode = 0;
 byte lesson = 1;
 byte lesson_size = MAXLESSONCNT;
 byte lesson_mode = 0;
@@ -1182,17 +1186,17 @@ void menu_remotetone() {
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
-  } else menu_xmit_mode();
+  } else menu_buzzer_mode();
 }
 
 
 
 // xmit mode
 // increase or decrease keyer tone
-void menu_xmit_mode() {
-  char prev_mode = realtime_xmit;
+void menu_buzzer_mode() {
+  char prev_mode = buzz_mode;
   lcds.clear();
-  print_line(0, "XMIT MODE");
+  print_line(0, "BUZZER MODE");
   // wait until button is released
   while (sw1Pushed) {
     read_switch();
@@ -1204,31 +1208,30 @@ void menu_xmit_mode() {
     keyerinfo = 0;
     read_paddles();
     if (keyerinfo & DAH_REG) {
-      realtime_xmit++;
+      buzz_mode++;
       tone(pinBuzz, remotetone );
       delay( dittime );
       noTone( pinBuzz);
     }
     if (keyerinfo & DIT_REG) {
-      realtime_xmit--;
+      buzz_mode--;
       tone(pinBuzz, remotetone );
       delay( dittime );
       noTone( pinBuzz);
     }
     // check limits
-    if (realtime_xmit < 0) realtime_xmit = 0;
-    if (realtime_xmit > 2) realtime_xmit = 2;
+    if (buzz_mode < 0) buzz_mode = 0;
+    if (buzz_mode > 1) buzz_mode = 1;
 
-    switch( realtime_xmit )
+    switch( buzz_mode )
     {
       case 0:
-        print_line(1, "REALTIME");
+        print_line(1, "INTERNAL");
+        pinBuzz = pinInnerBuzz;
       break;
       case 1:
-        print_line(1, "PER LETTER");
-      break;
-      case 2:
-        print_line(1, "PER WORD");
+        print_line(1, "EXTERNAL");
+        pinBuzz = pinOuterBuzz;
       break;
       default:
         print_line(1, "ERROR");
@@ -1245,7 +1248,8 @@ void menu_xmit_mode() {
   delay(10); // debounce
   // if wpm changed the recalculate the
   // dit timing and and send an OK message
-  if (prev_mode != realtime_xmit) {
+  if (prev_mode != buzz_mode) {
+    EEPROM[7] = buzz_mode;
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
@@ -1382,8 +1386,11 @@ void setup() {
   pinMode(pinDah,  INPUT_PULLUP);
   pinMode(pinSw1,  INPUT_PULLUP);
   pinMode(pinBuzz, OUTPUT);
-  //pinMode(8, OUTPUT);
+  pinMode(pinOuterBuzz, OUTPUT);
+  pinMode(pinInnerBuzz, OUTPUT);
+  pinMode(7, OUTPUT);
   pinMode(15, OUTPUT);
+  digitalWrite( 7, LOW );
   digitalWrite( 15, LOW );
   // startup init
   Serial.begin(BAUDRATE);     // init serial/debug port
@@ -1421,7 +1428,7 @@ void setup() {
     EEPROM[4] = keyerwpm = (byte) INITWPM;
     EEPROM[5] = keyermode = (byte) IAMBICA;
     EEPROM[6] = lesson_size = (byte) MAXLESSONCNT;
-
+    EEPROM[7] = buzz_mode = (byte) 0;
 
     //EEPROM.write()
   }
@@ -1433,9 +1440,15 @@ void setup() {
     keyerwpm = EEPROM[4];
     keyermode = EEPROM[5];
     lesson_size = EEPROM[6];
-
+    buzz_mode = EEPROM[7];
     //EEPROM.write()
   }
+
+  if( buzz_mode == 0 )
+    pinBuzz = pinInnerBuzz;
+  else
+    pinBuzz = pinOuterBuzz;
+  
 
   ditcalc();
 }
@@ -1447,6 +1460,7 @@ void setup() {
 // main loop
 void loop() {
   uint32_t t0;
+  digitalWrite( 7, LOW );
   digitalWrite( 15, LOW );
   read_switch();
   if (sw1Pushed) {
