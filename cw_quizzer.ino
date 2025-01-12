@@ -153,6 +153,7 @@ const uint8_t pinDit  = 5;  // dit key input
 const uint8_t pinDah  = 6;  // dah key input
 const uint8_t pinSw1  = 10;  // push-button switch
 const uint8_t pinBuzz = 9;  // buzzer/speaker pin
+//const uint8_t pinBuzz = 8;  // buzzer/speaker pin
 
 #define VERSION   "0.1.0"
 const byte ver = 01;
@@ -300,6 +301,11 @@ class LCD_Sim
       {
         r=0;
         c=0;
+      }
+
+      if( ch == '^' )
+      {
+        clear();
       }
 
       if( draw )
@@ -1376,6 +1382,7 @@ void setup() {
   pinMode(pinDah,  INPUT_PULLUP);
   pinMode(pinSw1,  INPUT_PULLUP);
   pinMode(pinBuzz, OUTPUT);
+  //pinMode(8, OUTPUT);
   pinMode(15, OUTPUT);
   digitalWrite( 15, LOW );
   // startup init
