@@ -162,15 +162,20 @@ const byte ver = 01;
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
-const char m2a[129] PROGMEM =
+const char m2a[0xc6] PROGMEM =
   {'~',' ','E','T','I','A','N','M','S','U','R','W','D','K','G','O',
    'H','V','F','*','L','*','P','J','B','X','C','Y','Z','Q','*','*',
    '5','4','S','3','*','*','*','2','&','*','+','*','*','*','J','1',
    '6','=','/','*','*','#','(','*','7','*','G','*','8','*','9','0',
    '^','*','*','*','*','*','*','*','*','*','*','*','?','_','*','*',
-   '*','\\','"','*','*','.','*','*','*','*','@','*','*','*','\'','*',
+   '*','*','"','*','*','.','*','*','*','*','@','*','*','*','\'','*',
    '*','-','*','*','*','*','*','*','*','*',';','!','*',')','*','*',
-   '*','*','*',',','*','*','*','*',':','*','*','*','*','*','*','*','^'};
+   '*','*','*',',','*','*','*','*',':','*','*','*','*','*','*','*',
+   '^','*','*','*','*','*','*','*','*','*','*','*','*','*','*','*',
+   '*','*','*','*','*','*','*','*','*','*','*','*','*','*','*','*',
+   '*','*','*','*','*','*','*','*','*','*','*','*','*','*','*','*',
+   '*','*','*','*','*','*','*','*','*','*','*','*','*','*','*','*',
+   '*','*','*','*','*','\\'};
 
 // ASCII-to-Morse lookup table
 const uint8_t a2m[64] PROGMEM =
@@ -181,7 +186,7 @@ const uint8_t a2m[64] PROGMEM =
    0x5a,0x05,0x18,0x1a,0x0c,0x02,0x12,0x0e,  // @ A B C D E F G
    0x10,0x04,0x17,0x0d,0x14,0x07,0x06,0x0f,  // H I J K L M N O
    0x16,0x1d,0x0a,0x08,0x03,0x09,0x11,0x0b,  // P Q R S T U V W
-   0x19,0x1b,0x1c,0x4c,0x40,0x4c,0x80,0x4d}; // X Y Z [ \ ] ^ _
+   0x19,0x1b,0x1c,0x4c,0xc5,0x4c,0x80,0x4d}; // X Y Z [ \ ] ^ _
 
 // user interface
 #define NBP  0  // no-button-pushed
@@ -205,10 +210,10 @@ volatile uint8_t  menumode = RUN_MODE;
 #define MAXTONE 850
 
 #define MINLESSONMODE 0
-#define MAXLESSONMODE 1
+#define MAXLESSONMODE 2
 
 #define MINLESSON 1
-#define MAXLESSON 39
+#define MAXLESSON 40
 
 #define MINLESSONCNT 1
 #define MAXLESSONCNT 80
@@ -937,6 +942,20 @@ void menu_trainer_mode() {
     if (lesson_mode < MINLESSONMODE) lesson_mode = MINLESSONMODE;
     if (lesson_mode > MAXLESSONMODE) lesson_mode = MAXLESSONMODE;
 
+    switch (lesson_mode) {
+      case 0:
+        print_line(1, "None");
+        break;
+      case 1:
+        print_line(1, "LICW method");
+        break;
+      case 2:
+        print_line(1, "Koch method");
+        break;
+      default:
+        print_line(1, "ERROR");
+        break;
+    }
     
     while (GOTKEY) {
       keyerinfo = 0;
@@ -944,9 +963,9 @@ void menu_trainer_mode() {
       delay(10);
     }
     keyerinfo = 0;
-    itoa(lesson_mode,tmpstr,10);
+    //itoa(lesson_mode,tmpstr,10);
     //strcat(tmpstr," Hz");
-    print_line(1, tmpstr);
+    //print_line(1, tmpstr);
   }
   delay(10); // debounce
   // if wpm changed the recalculate the
@@ -1308,9 +1327,9 @@ void menu_mode() {
 // send a message
 void menu_msg() {
 test_again:
-  if( lesson_mode == 1 )
+  if( lesson_mode )
   {
-    char *quiz = "ALL WORK  AND NO PLAY MAKES  JACK A DULL BOY.  A DULL BOY.   A DULL BOY.   DULL";
+    char *quiz = "ALL WORK  AND NO PLAY MAKES  JACK A DULL BOY.  A DULL BOY.   A DULL BOY.";
     myrow = 0;
     mycol = 0;
     lcds.clear();
@@ -1327,7 +1346,16 @@ test_again:
 
     lcds.clear();
 
-    char* lesson_seq = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X";
+    char* lesson_licw = "REATINPGSLCDHOFUWBKMY59,QXV73?16.ZJ/28\40";
+    char* lesson_koch = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X\\";
+
+    char* lesson_seq;
+
+    if( lesson == 1 )
+      lesson_seq = lesson_licw;
+    else
+      lesson_seq = lesson_koch;
+
     int len = strlen(quiz);
 
     if( len > lesson_size )
