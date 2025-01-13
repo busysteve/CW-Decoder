@@ -188,6 +188,10 @@ const uint8_t a2m[64] PROGMEM =
    0x16,0x1d,0x0a,0x08,0x03,0x09,0x11,0x0b,  // P Q R S T U V W
    0x19,0x1b,0x1c,0x4c,0xc5,0x4c,0x80,0x4d}; // X Y Z [ \ ] ^ _
 
+
+const char* lesson_licw = "REATINPGSLCDHOFUWBKMY59,QXV73?16.ZJ/28\\40";
+const char* lesson_koch = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X\\";
+
 // user interface
 #define NBP  0  // no-button-pushed
 #define BSC  1  // button-single-click
@@ -339,7 +343,7 @@ class LCD_Sim
       for( int j=i; j < 15; j++ )
         print( ' ', false );
       
-      print( '\0', false );
+      //print( '\0', false );
 
       draw_screen();
     }
@@ -416,7 +420,7 @@ volatile uint8_t  keyswap    = 0;   // key swap
 // table lookup for CW decoder
 char lookup_cw(uint8_t addr) {
   char ch = '*';
-  if (addr < 129) ch = pgm_read_byte(m2a + addr);
+  if (addr < 0xc6) ch = pgm_read_byte(m2a + addr);
 
   #ifdef DEBUG
   Serial.println(addr);
@@ -914,8 +918,10 @@ void menu_tone() {
 // increase or decrease keyer tone
 void menu_trainer_mode() {
   uint16_t prev_lesson_mode = lesson_mode;
+
+  bool dirty = true;
+
   lcds.clear();
-  print_line(0, "TRAINER MODE");
   // wait until button is released
   while (sw1Pushed) {
     read_switch();
@@ -931,12 +937,14 @@ void menu_trainer_mode() {
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
+      dirty = true;
     }
     if (keyerinfo & DIT_REG) {
       lesson_mode-=1;
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
+      dirty = true;
     }
     // check limits
     if (lesson_mode < MINLESSONMODE) lesson_mode = MINLESSONMODE;
@@ -944,19 +952,45 @@ void menu_trainer_mode() {
 
     switch (lesson_mode) {
       case 0:
-        print_line(1, "None");
+        if( dirty )
+        {
+          lcds.clear();
+          print_line(0, "TRAINER MODE");
+          print_line(1, "None");
+        }
         break;
       case 1:
-        print_line(1, "LICW method");
+        if( dirty )
+        {
+          lcds.clear();
+          print_line(0, "TRAINER MODE");
+          print_line(1, "LICW method");
+          lcds.setCursor(0, 2);
+          lcds.print( lesson_licw );
+        }
         break;
       case 2:
-        print_line(1, "Koch method");
+        if( dirty )
+        {
+          lcds.clear();
+          print_line(0, "TRAINER MODE");
+          print_line(1, "Koch method");
+          lcds.setCursor(0, 2);
+          lcds.print( lesson_koch );
+        }
         break;
       default:
-        print_line(1, "ERROR");
+        if( dirty )
+        {
+          print_line(0, "TRAINER MODE");
+          lcds.clear();
+          print_line(1, "ERROR");
+        }
         break;
     }
     
+    dirty = false;
+
     while (GOTKEY) {
       keyerinfo = 0;
       read_paddles();
@@ -1346,12 +1380,10 @@ test_again:
 
     lcds.clear();
 
-    char* lesson_licw = "REATINPGSLCDHOFUWBKMY59,QXV73?16.ZJ/28\40";
-    char* lesson_koch = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X\\";
 
     char* lesson_seq;
 
-    if( lesson == 1 )
+    if( lesson_mode == 1 )
       lesson_seq = lesson_licw;
     else
       lesson_seq = lesson_koch;
