@@ -157,8 +157,8 @@ const uint8_t pinOuterBuzz = 8;  // buzzer/speaker pin
 uint8_t pinBuzz = pinInnerBuzz;  // buzzer/speaker pin
 //const uint8_t pinBuzz = 8;  // buzzer/speaker pin
 
-#define VERSION   "0.1.0"
-const byte ver = 01;
+#define VERSION   "0.1.6"
+const byte ver = 02;
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
@@ -191,6 +191,7 @@ const uint8_t a2m[64] PROGMEM =
 
 const char* lesson_licw = "REATINPGSLCDHOFUWBKMY59,QXV73?16.ZJ/28\\40";
 const char* lesson_koch = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X\\";
+char* lesson_seq;
 
 // user interface
 #define NBP  0  // no-button-pushed
@@ -218,6 +219,9 @@ volatile uint8_t  menumode = RUN_MODE;
 
 #define MINLESSON 1
 #define MAXLESSON 40
+
+#define MINWINDOW 0
+#define MAXWINDOW 10
 
 #define MINLESSONCNT 1
 #define MAXLESSONCNT 80
@@ -410,6 +414,7 @@ byte buzz_mode = 0;
 byte lesson = 1;
 byte lesson_size = MAXLESSONCNT;
 byte lesson_mode = 0;
+byte lesson_window = 0;
 
 byte farns = 0;
 
@@ -1053,8 +1058,13 @@ void menu_trainer_lesson() {
     }
     keyerinfo = 0;
     itoa(lesson,tmpstr,10);
-    //strcat(tmpstr," Hz");
     print_line(1, tmpstr);
+
+    lcds.setCursor(0, 2);
+    char str[51] = {0};
+    strncpy( str, lesson_seq, lesson+1);
+    strncat( str, "                                                  ", 45-(lesson+1) );
+    lcds.print( str );
   }
   delay(10); // debounce
   // if wpm changed the recalculate the
@@ -1064,8 +1074,76 @@ void menu_trainer_lesson() {
     ditcalc();
     send_cwmsg("OK", 0);
     back2run();
+  } else menu_lesson_window();
+}
+
+
+
+
+// remote keyer tone menu to
+// increase or decrease keyer tone
+void menu_lesson_window() {
+  uint16_t prev_lesson_window = lesson_window;
+  lcds.clear();
+  print_line(0, "TRAINER WINDOW");
+  // wait until button is released
+  while (sw1Pushed) {
+    read_switch();
+    delay(10);
+  }
+  // loop until button is pressed
+  while (!sw1Pushed) {
+    read_switch();
+    keyerinfo = 0;
+    read_paddles();
+    if (keyerinfo & DAH_REG) {
+      lesson_window+=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    if (keyerinfo & DIT_REG) {
+      lesson_window-=1;
+      tone(pinBuzz, keyertone );
+      delay( dittime );
+      noTone( pinBuzz);
+    }
+    // check limits
+    if (lesson_window < MINWINDOW) lesson_window = MINWINDOW;
+    if (lesson_window > MAXWINDOW) lesson_window = MAXWINDOW;
+
+    
+    while (GOTKEY) {
+      keyerinfo = 0;
+      read_paddles();
+      delay(10);
+    }
+    keyerinfo = 0;
+    itoa(lesson_window,tmpstr,10);
+    print_line(1, tmpstr);
+
+    int idx = (lesson+1) - lesson_window;
+    if( idx <= 0 )
+      idx = 0;
+
+    lcds.setCursor(0, 2);
+    char str[51] = {0};
+    strncpy( str, &lesson_seq[idx], lesson_window );
+    strncat( str, "                                                  ", 45-(lesson_window) );
+    lcds.print( str );
+  }
+  delay(10); // debounce
+  // if wpm changed the recalculate the
+  // dit timing and and send an OK message
+  if (prev_lesson_window != lesson_window) {
+    EEPROM[8] = (byte)lesson_window;
+    ditcalc();
+    send_cwmsg("OK", 0);
+    back2run();
   } else menu_trainer_lesson_size();
 }
+
+
 
 
 // remote keyer tone menu to
@@ -1397,9 +1475,14 @@ test_again:
     
     srandom( millis() );
 
+    char window = (lesson+1) - lesson_window;
+    if( window <=0 )
+      window = 0;
+
     for( int i=0; i < len; i++ )
     {
-      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[random() % (lesson+1)];
+      //quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[random() % (lesson+1)];
+      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[ ( random() % (lesson_window) ) + window  ];
     }
     quiz[len] = 0;
     send_cwmsg(quiz, 1);
@@ -1471,24 +1554,18 @@ void setup() {
   } while( u8g.nextPage() );
   */
 
-  delay(1500);
-  send_cwmsg("OK", 0);
-  //lcds.setRowOffsets( 0, 20, 30 40 );
-  lcds.clear();
-  //lcds.autoscroll();
-  //lcds.setCursor(20,0);    
-
   byte val = EEPROM[0];
   if( val != ver )
   {
     EEPROM[0] = ver;
-    EEPROM[1] = lesson = (byte) 2;
+    EEPROM[1] = lesson = (byte) 5;
     EEPROM[2] = lesson_mode = (byte) 1;
-    EEPROM[3] = farns = (byte) 0;
+    EEPROM[3] = farns = (byte) 12;
     EEPROM[4] = keyerwpm = (byte) INITWPM;
     EEPROM[5] = keyermode = (byte) IAMBICA;
     EEPROM[6] = lesson_size = (byte) MAXLESSONCNT;
-    EEPROM[7] = buzz_mode = (byte) 0;
+    EEPROM[7] = buzz_mode = (byte) 1;
+    EEPROM[8] = lesson_window = (byte) 0;
 
     //EEPROM.write()
   }
@@ -1501,14 +1578,27 @@ void setup() {
     keyermode = EEPROM[5];
     lesson_size = EEPROM[6];
     buzz_mode = EEPROM[7];
+    lesson_window = EEPROM[8];
     //EEPROM.write()
   }
 
+  if( lesson_mode == 1 )
+    lesson_seq = lesson_licw;
+  else
+    lesson_seq = lesson_koch;
+    
   if( buzz_mode == 0 )
     pinBuzz = pinInnerBuzz;
   else
     pinBuzz = pinOuterBuzz;
   
+  delay(1500);
+  send_cwmsg("OK", 0);
+  //lcds.setRowOffsets( 0, 20, 30 40 );
+  lcds.clear();
+  //lcds.autoscroll();
+  //lcds.setCursor(20,0);    
+
 
   ditcalc();
 }
