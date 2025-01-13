@@ -158,7 +158,7 @@ uint8_t pinBuzz = pinInnerBuzz;  // buzzer/speaker pin
 //const uint8_t pinBuzz = 8;  // buzzer/speaker pin
 
 #define VERSION   "0.1.6"
-const byte ver = 02;
+const byte ver = 01;
 //#define DEBUG 1           // uncomment for debug
 
 // Morse-to-ASCII lookup table
@@ -1481,8 +1481,10 @@ test_again:
 
     for( int i=0; i < len; i++ )
     {
-      //quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[random() % (lesson+1)];
-      quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[ ( random() % (lesson_window) ) + window  ];
+      if( window == 0 )
+        quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[random() % (lesson+1)];
+      else  
+        quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[ ( random() % (lesson_window) ) + window  ];
     }
     quiz[len] = 0;
     send_cwmsg(quiz, 1);
