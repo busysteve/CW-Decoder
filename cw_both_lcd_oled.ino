@@ -1,9 +1,15 @@
 
 
-#define CW_LCD 0
-#define CW_OLED 1
+#define CW_LCD 1
+#define CW_OLED 0
 
 #include <Arduino.h>
+
+
+#define SPACE10   "          "
+#define SPACE15   "               "
+#define SPACE20   "                    "
+
 
 #if CW_LCD
 
@@ -39,11 +45,6 @@ LiquidCrystal_I2C lcds(LCD_ADDRESS, COLSIZE, ROWSIZE);
 #define ROWSIZE    5
 
 
-#define MAXCOL    COLSIZE-1  // max display column
-#define MAXLINE   ROWSIZE-1  // max display row
-#define SPACE10   "          "
-#define SPACE15   "               "
-#define SPACE20   "                    "
 
 
 #include "U8glib.h"
@@ -171,6 +172,8 @@ LCD_Sim lcds;
 
 #endif
 
+#define MAXCOL    COLSIZE-1  // max display column
+#define MAXLINE   ROWSIZE-1  // max display row
 
 // ============================================================
 // decoder.ino :: An Iambic Keyer and Decoder (4x20 LCD)
@@ -187,7 +190,7 @@ const uint8_t pinOuterBuzz = CW_BUZZ_PIN_OUTER;  // buzzer/speaker pin
 uint8_t pinBuzz = pinInnerBuzz;  // buzzer/speaker pin
 //const uint8_t pinBuzz = 8;  // buzzer/speaker pin
 
-#define VERSION   "0.1.6"
+#define VERSION   "0.1.9"
 const byte ver = 01;
 //#define DEBUG 1           // uncomment for debug
 
@@ -219,8 +222,9 @@ const uint8_t a2m[64] PROGMEM =
    0x19,0x1b,0x1c,0x4c,0xc5,0x4c,0x80,0x4d}; // X Y Z [ \ ] ^ _
 
 
-const char* lesson_licw = "REATINPGSLCDHOFUWBKMY59,QXV73?16.ZJ/28\\40";
-const char* lesson_koch = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X\\";
+const char* lesson_licw    = "REATINPGSLCDHOFUWBKMY59,QXV73?16.ZJ/28\\40";
+const char* lesson_koch    = "KMRSUAPTLOWI.NJEF0Y,VG5/Q9ZH38B?427C1D6X\\";
+const char* lesson_estonia = "ESTONIADRMULCHPFWYGBJKQXZY1234567890,.?/\\";
 char* lesson_seq;
 
 // user interface
@@ -245,7 +249,7 @@ volatile uint8_t  menumode = RUN_MODE;
 #define MAXTONE 850
 
 #define MINLESSONMODE 0
-#define MAXLESSONMODE 2
+#define MAXLESSONMODE 3
 
 #define MINLESSON 1
 #define MAXLESSON 40
@@ -962,6 +966,35 @@ void menu_trainer_mode() {
 #endif
         }
         break;
+      case 3:
+        if( dirty )
+        {
+          lcds.clear();
+#if CW_OLED
+          print_line(0, "TRAIN MODE");
+          print_line(1, "Estonia method");
+          lcds.setCursor(0, 2);
+          lcds.print( lesson_estonia );
+#else
+          print_line(0, "TRAIN MODE Estonia");
+
+          char str[21];
+          int x=0;
+
+          memset( str, 0, sizeof(str) );
+          strncpy( str, lesson_estonia, 20 );
+          print_line(1, str );
+
+          memset( str, 0, sizeof(str) );
+          strncpy( str, &lesson_estonia[20], 20 );
+          print_line(2, str );
+
+          memset( str, 0, sizeof(str) );
+          strncpy( str, &lesson_estonia[40], 20 );
+          print_line(3, str );
+#endif
+        }
+        break;
       default:
         if( dirty )
         {
@@ -1510,6 +1543,8 @@ test_again:
 
     if( lesson_mode == 1 )
       lesson_seq = lesson_licw;
+    else if( lesson_mode == 3 )
+      lesson_seq = lesson_estonia;
     else
       lesson_seq = lesson_koch;
 
