@@ -1,7 +1,7 @@
 
 
-#define CW_LCD 1
-#define CW_OLED 0
+#define CW_LCD 0
+#define CW_OLED 1
 
 #include <Arduino.h>
 
@@ -37,6 +37,14 @@ LiquidCrystal_I2C lcds(LCD_ADDRESS, COLSIZE, ROWSIZE);
 
 #define COLSIZE   15
 #define ROWSIZE    5
+
+
+#define MAXCOL    COLSIZE-1  // max display column
+#define MAXLINE   ROWSIZE-1  // max display row
+#define SPACE10   "          "
+#define SPACE15   "               "
+#define SPACE20   "                    "
+
 
 #include "U8glib.h"
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_DEV_0|U8G_I2C_OPT_NO_ACK|U8G_I2C_OPT_FAST);	// Fast I2C / TWI 
@@ -249,12 +257,6 @@ volatile uint8_t  menumode = RUN_MODE;
 #define MAXLESSONCNT 80
 
 
-
-#define MAXCOL    COLSIZE-1  // max display column
-#define MAXLINE   ROWSIZE-1  // max display row
-#define SPACE10   "          "
-#define SPACE15   "               "
-#define SPACE20   "                    "
 
 //#define BAUDRATE 9600
 #define BAUDRATE 115200
@@ -1004,6 +1006,9 @@ void menu_trainer_lesson() {
     read_switch();
     delay(10);
   }
+
+  bool dirty = true;
+
   // loop until button is pressed
   while (!sw1Pushed) {
     read_switch();
@@ -1014,12 +1019,14 @@ void menu_trainer_lesson() {
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
+      dirty = true;
     }
     if (keyerinfo & DIT_REG) {
       lesson-=1;
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
+      dirty = true;
     }
     // check limits
     if (lesson < MINLESSON) lesson = MINLESSON;
@@ -1031,37 +1038,43 @@ void menu_trainer_lesson() {
       read_paddles();
       delay(10);
     }
-    keyerinfo = 0;
-    itoa(lesson,tmpstr,10);
-    print_line(0, "LESSON ");
-    lcds.setCursor( 8, 0 );
-    lcds.print( tmpstr );
-    lcds.print( "  " );
 
-    char letterseq[51] = {0};
-    strncpy( letterseq, lesson_seq, lesson+1);
-    strncat( letterseq, "                                                  ", 45-(lesson+1) );
+    if( dirty )
+    {
 
-#if CW_OLED
-    lcds.print( str );
-#else
+      keyerinfo = 0;
+      itoa(lesson,tmpstr,10);
+      print_line(0, "LESSON ");
+      lcds.setCursor( 8, 0 );
+      lcds.print( tmpstr );
+      lcds.print( "  " );
 
-    char str[21];
-    int x=0;
+      char letterseq[51] = {0};
+      strncpy( letterseq, lesson_seq, lesson+1);
+      strncat( letterseq, "                                                  ", 45-(lesson+1) );
 
-    memset( str, 0, sizeof(str) );
-    strncpy( str, letterseq, 20 );
-    print_line(1, str );
+  #if CW_OLED
+      lcds.setCursor( 0, 1 );
+      lcds.print( letterseq );
+  #else
 
-    memset( str, 0, sizeof(str) );
-    strncpy( str, &letterseq[20], 20 );
-    print_line(2, str );
+      char str[21];
+      int x=0;
 
-    memset( str, 0, sizeof(str) );
-    strncpy( str, &letterseq[40], 20 );
-    print_line(3, str );
-#endif
+      memset( str, 0, sizeof(str) );
+      strncpy( str, letterseq, 20 );
+      print_line(1, str );
 
+      memset( str, 0, sizeof(str) );
+      strncpy( str, &letterseq[20], 20 );
+      print_line(2, str );
+
+      memset( str, 0, sizeof(str) );
+      strncpy( str, &letterseq[40], 20 );
+      print_line(3, str );
+  #endif
+      dirty = false;
+    }
   }
   delay(10); // debounce
   // if wpm changed then recalculate the
@@ -1088,6 +1101,9 @@ void menu_lesson_window() {
     read_switch();
     delay(10);
   }
+
+  bool dirty = true;
+
   // loop until button is pressed
   while (!sw1Pushed) {
     read_switch();
@@ -1098,12 +1114,14 @@ void menu_lesson_window() {
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
+      dirty = true;
     }
     if (keyerinfo & DIT_REG) {
       lesson_window-=1;
       tone(pinBuzz, keyertone );
       delay( dittime );
       noTone( pinBuzz);
+      dirty = true;
     }
     // check limits
     if (lesson_window <= MINWINDOW) lesson_window = MINWINDOW;
@@ -1117,42 +1135,47 @@ void menu_lesson_window() {
     }
     keyerinfo = 0;
 
-    print_line(0, "WINDOW ");
-    itoa(lesson_window,tmpstr,10);
-    lcds.print( tmpstr );
-    lcds.print( "  " );
+    if( dirty )
+    {
+      lcds.setCursor( 0, 0 );
+      lcds.print("WINDOW ");
+      itoa(lesson_window,tmpstr,10);
+      lcds.print( tmpstr );
+      lcds.print( "  " );
 
-    int idx = (lesson+1) - lesson_window;
-    if( idx <= 0 || idx <= (lesson+1) )
-      idx = 0;
+      int idx = (lesson+1) - lesson_window;
+      if( idx <= 0 || idx <= (lesson+1) )
+        idx = 0;
 
-    lcds.setCursor(0, 1);
-    char strwindow[51] = {0};
-    char window = ( lesson_window == 0 ? (lesson+1) : lesson_window );
-    strncpy( strwindow, &lesson_seq[idx], window );
-    strncat( strwindow, "                                                  ", 45-(window) );
+      lcds.setCursor(0, 1);
+      char strwindow[51] = {0};
+      char window = ( lesson_window == 0 ? (lesson+1) : lesson_window );
+      strncpy( strwindow, &lesson_seq[idx], window );
+      strncat( strwindow, "                                                  ", 45-(window) );
 
-#if CW_OLED
-    lcds.print( strwindow );
-#else
+  #if CW_OLED
+      //lcds.setCursor( 0, 1 );    
+      lcds.print( strwindow );
+  #else
 
-    char str[21];
-    int x=0;
+      char str[21];
+      int x=0;
 
-    memset( str, 0, sizeof(str) );
-    strncpy( str, strwindow, 20 );
-    print_line(1, str );
+      memset( str, 0, sizeof(str) );
+      strncpy( str, strwindow, 20 );
+      print_line(1, str );
 
-    memset( str, 0, sizeof(str) );
-    strncpy( str, &strwindow[20], 20 );
-    print_line(2, str );
+      memset( str, 0, sizeof(str) );
+      strncpy( str, &strwindow[20], 20 );
+      print_line(2, str );
 
-    memset( str, 0, sizeof(str) );
-    strncpy( str, &strwindow[40], 20 );
-    print_line(3, str );
+      memset( str, 0, sizeof(str) );
+      strncpy( str, &strwindow[40], 20 );
+      print_line(3, str );
 
-#endif
-
+  #endif
+      dirty = false;
+    }
 
 
   }
@@ -1559,7 +1582,7 @@ void setup() {
   pinMode(pinOuterBuzz, OUTPUT);
   pinMode(pinInnerBuzz, OUTPUT);
   
-  #if OLED
+  #if CW_OLED
   pinMode(7, OUTPUT);
   pinMode(15, OUTPUT);
 
@@ -1571,10 +1594,14 @@ void setup() {
   Serial.begin(BAUDRATE);     // init serial/debug port
   change_wpm(INITWPM);        // init keyer speed
 
+#if CW_LCD
   lcds.init();                 // init LCD display
   lcds.backlight();
   lcds.clear();
   lcds.noCursor();
+#else
+  lcds.clear();
+#endif
 
   print_line(0, "CW Processor");
   print_line(1, "Version");
@@ -1644,7 +1671,7 @@ void setup() {
 void loop() {
   uint32_t t0;
 
-#if OLED
+#if CW_OLED
   digitalWrite( 7, LOW );
   digitalWrite( 15, LOW );
 #endif
