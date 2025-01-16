@@ -1679,6 +1679,8 @@ void setup() {
 
   if( lesson_mode == 1 )
     lesson_seq = lesson_licw;
+  if( lesson_mode == 3 )
+    lesson_seq = lesson_estonia;
   else
     lesson_seq = lesson_koch;
     
