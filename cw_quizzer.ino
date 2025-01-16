@@ -809,7 +809,7 @@ void ditcalc() {
   dahtime    = (DITCONST * 3)/keyerwpm;
   lettergap1 = (DITCONST * 2.5)/(keyerwpm);
   lettergap2   = (DITCONST * 3)/(farn);
-  wordgap1   = (DITCONST * 4.5)/(keyerwpm);
+  wordgap1   = (DITCONST * 5)/(keyerwpm);
   wordgap2   = (DITCONST * 7)/(farn);
 }
 
@@ -1545,7 +1545,7 @@ void setup() {
   lcds.clear();
   //lcds.noCursor();
 
-  print_line(0, "Decoder");
+  print_line(0, "CW Processor");
   print_line(1, "Version");
   print_line(2, VERSION);
 
