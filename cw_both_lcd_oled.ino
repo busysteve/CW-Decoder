@@ -368,8 +368,28 @@ void clear_line(uint8_t row) {
 
 // print the ascii char
 void printchar(char ch) {
+#if CW_OLED
   lcds.print( ch );
-
+#else
+  if ((myrow <= MAXLINE) & (mycol <= MAXCOL)) {
+    lcds.setCursor(mycol,myrow);
+    if (ch == '^') {
+      // clear screen if 6-dit code is received
+      lcds.clear();
+      myrow = 0;
+      mycol = 0;
+    } else {
+      lcds.print(ch);
+      mycol++;
+    }
+  }
+  if (mycol > MAXCOL) {
+    mycol = 0;
+    myrow++;
+    if (myrow > MAXLINE) myrow = 0;
+    clear_line(myrow);
+  }
+#endif
 }
 
 
@@ -714,7 +734,6 @@ void back2run() {
   clear_line(0);
   myrow = 0;
   mycol = 0;
-  lcds.setCursor( myrow, mycol );
 }
 
 uint8_t keyerwpm;
@@ -980,7 +999,6 @@ void menu_trainer_mode() {
 void menu_trainer_lesson() {
   uint16_t prev_lesson = lesson;
   lcds.clear();
-  print_line(0, "TRAINER LESSON");
   // wait until button is released
   while (sw1Pushed) {
     read_switch();
@@ -1015,16 +1033,38 @@ void menu_trainer_lesson() {
     }
     keyerinfo = 0;
     itoa(lesson,tmpstr,10);
-    print_line(1, tmpstr);
+    print_line(0, "LESSON ");
+    lcds.setCursor( 8, 0 );
+    lcds.print( tmpstr );
+    lcds.print( "  " );
 
-    lcds.setCursor(0, 2);
-    char str[51] = {0};
-    strncpy( str, lesson_seq, lesson+1);
-    strncat( str, "                                                  ", 45-(lesson+1) );
+    char letterseq[51] = {0};
+    strncpy( letterseq, lesson_seq, lesson+1);
+    strncat( letterseq, "                                                  ", 45-(lesson+1) );
+
+#if CW_OLED
     lcds.print( str );
+#else
+
+    char str[21];
+    int x=0;
+
+    memset( str, 0, sizeof(str) );
+    strncpy( str, letterseq, 20 );
+    print_line(1, str );
+
+    memset( str, 0, sizeof(str) );
+    strncpy( str, &letterseq[20], 20 );
+    print_line(2, str );
+
+    memset( str, 0, sizeof(str) );
+    strncpy( str, &letterseq[40], 20 );
+    print_line(3, str );
+#endif
+
   }
   delay(10); // debounce
-  // if wpm changed the recalculate the
+  // if wpm changed then recalculate the
   // dit timing and and send an OK message
   if (prev_lesson != lesson) {
     EEPROM[1] = (byte)lesson;
@@ -1042,7 +1082,7 @@ void menu_trainer_lesson() {
 void menu_lesson_window() {
   uint16_t prev_lesson_window = lesson_window;
   lcds.clear();
-  print_line(0, "TRAINER WINDOW");
+  
   // wait until button is released
   while (sw1Pushed) {
     read_switch();
@@ -1066,7 +1106,7 @@ void menu_lesson_window() {
       noTone( pinBuzz);
     }
     // check limits
-    if (lesson_window < MINWINDOW) lesson_window = MINWINDOW;
+    if (lesson_window <= MINWINDOW) lesson_window = MINWINDOW;
     if (lesson_window > MAXWINDOW) lesson_window = MAXWINDOW;
 
     
@@ -1076,18 +1116,45 @@ void menu_lesson_window() {
       delay(10);
     }
     keyerinfo = 0;
+
+    print_line(0, "WINDOW ");
     itoa(lesson_window,tmpstr,10);
-    print_line(1, tmpstr);
+    lcds.print( tmpstr );
+    lcds.print( "  " );
 
     int idx = (lesson+1) - lesson_window;
-    if( idx <= 0 )
+    if( idx <= 0 || idx <= (lesson+1) )
       idx = 0;
 
-    lcds.setCursor(0, 2);
-    char str[51] = {0};
-    strncpy( str, &lesson_seq[idx], lesson_window );
-    strncat( str, "                                                  ", 45-(lesson_window) );
-    lcds.print( str );
+    lcds.setCursor(0, 1);
+    char strwindow[51] = {0};
+    char window = ( lesson_window == 0 ? (lesson+1) : lesson_window );
+    strncpy( strwindow, &lesson_seq[idx], window );
+    strncat( strwindow, "                                                  ", 45-(window) );
+
+#if CW_OLED
+    lcds.print( strwindow );
+#else
+
+    char str[21];
+    int x=0;
+
+    memset( str, 0, sizeof(str) );
+    strncpy( str, strwindow, 20 );
+    print_line(1, str );
+
+    memset( str, 0, sizeof(str) );
+    strncpy( str, &strwindow[20], 20 );
+    print_line(2, str );
+
+    memset( str, 0, sizeof(str) );
+    strncpy( str, &strwindow[40], 20 );
+    print_line(3, str );
+
+#endif
+
+
+
   }
   delay(10); // debounce
   // if wpm changed the recalculate the
@@ -1432,16 +1499,17 @@ test_again:
     
     srandom( millis() );
 
-    char window = (lesson+1) - lesson_window;
-    if( window <=0 )
-      window = 0;
+    //char window = (lesson+1) - lesson_window;
+    //if( window <=0 )
+    //  window = 0;
+    char window = ( lesson_window == 0 ? (lesson+1) : lesson_window );
 
     for( int i=0; i < len; i++ )
     {
       if( window == 0 )
         quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[random() % (lesson+1)];
       else  
-        quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[ ( random() % (lesson_window) ) + window  ];
+        quiz[i] = (random() % 4) == 0 && quiz[i-1] != ' ' && lesson_size > 6 ? ' ' : lesson_seq[ ( random() % (window) ) ];
     }
     quiz[len] = 0;
     send_cwmsg(quiz, 1);
